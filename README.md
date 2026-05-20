@@ -1,12 +1,18 @@
 # 📋 Ethara - Team Task Manager
 
-[![Node.js](https://img.shields.io/badge/Node.js->=20-green.svg)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/React-Latest-blue.svg)](https://react.dev/)
-[![Express](https://img.shields.io/badge/Express-4.x-orange.svg)](https://expressjs.com/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Latest-green.svg)](https://www.mongodb.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<div align="center">
 
-> A modern, full-stack project and task management platform designed for small teams to collaborate seamlessly.
+[![Node.js](https://img.shields.io/badge/Node.js->=20-green?style=for-the-badge&logo=nodedotjs)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-Latest-blue?style=for-the-badge&logo=react)](https://react.dev/)
+[![Express](https://img.shields.io/badge/Express-4.x-black?style=for-the-badge&logo=express)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Latest-green?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
+**A modern, full-stack project and task management platform designed for small teams to collaborate seamlessly.**
+
+</div>
+
+## 🎯 Overview
 
 Ethara empowers teams to organize work efficiently with real-time collaboration, intuitive task management, and comprehensive project oversight. Users can sign up, create projects, manage team members, assign tasks, track progress through multiple statuses, and monitor work via an interactive dashboard.
 
