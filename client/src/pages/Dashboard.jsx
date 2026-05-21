@@ -69,9 +69,11 @@ export default function Dashboard() {
           <h1>Dashboard</h1>
           <p className="subtitle">Welcome back, {user.name}. Here is what needs attention.</p>
         </div>
-        <Link to="/projects" className="btn-primary">
-          New project
-        </Link>
+        {user?.role === 'admin' && (
+          <Link to="/projects" className="btn-primary">
+            New project
+          </Link>
+        )}
       </header>
 
       <section className="stats-grid" aria-label="Task summary">
