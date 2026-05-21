@@ -124,18 +124,39 @@ const updateTask = async (req, res, next) => {
     }
 
     const project = await loadProjectForUser(task.project, req.user);
-    const assignee = normalizeAssignee(req.body.assignee);
-    ensureAssigneeBelongsToProject(project, assignee);
+    const isAssignee = getId(task.assignee) === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
 
-    const allowedFields = ['title', 'description', 'status', 'priority', 'dueDate'];
-    allowedFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        task[field] = field === 'dueDate' && req.body[field] === '' ? null : req.body[field];
+    // If user is only assignee (not admin/owner), they can only update status
+    if (!isAdmin && isAssignee) {
+      if (req.body.status !== undefined) {
+        task.status = req.body.status;
       }
-    });
+      // Reject any other field updates
+      const forbiddenFields = ['title', 'description', 'priority', 'dueDate', 'assignee'];
+      for (const field of forbiddenFields) {
+        if (req.body[field] !== undefined && task[field] !== req.body[field]) {
+          throw new ApiError(403, `Members can only update task status`);
+        }
+      }
+    } else if (!isAdmin && !isAssignee) {
+      // Non-admin, non-assignee members cannot edit tasks
+      throw new ApiError(403, 'Only the assignee or admin can update this task');
+    } else {
+      // Admin or project owner can update all fields
+      const assignee = normalizeAssignee(req.body.assignee);
+      ensureAssigneeBelongsToProject(project, assignee);
 
-    if (req.body.assignee !== undefined) {
-      task.assignee = assignee;
+      const allowedFields = ['title', 'description', 'status', 'priority', 'dueDate'];
+      allowedFields.forEach((field) => {
+        if (req.body[field] !== undefined) {
+          task[field] = field === 'dueDate' && req.body[field] === '' ? null : req.body[field];
+        }
+      });
+
+      if (req.body.assignee !== undefined) {
+        task.assignee = assignee;
+      }
     }
 
     await task.save();

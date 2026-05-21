@@ -668,6 +668,24 @@ a {
   gap: 14px;
 }
 
+.info-box {
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.info-box p {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.info-box p:last-child {
+  margin-bottom: 0;
+}
+
 .form-row .form-group {
   flex: 1;
 }

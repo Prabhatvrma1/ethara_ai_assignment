@@ -60,6 +60,11 @@ export default function ProjectDetail() {
   }, [projectId]);
 
   const canManage = project && (user.role === 'admin' || project.owner?._id === user._id);
+  
+  // Check if user can only edit status (is assignee but not admin)
+  const canOnlyEditStatus = editingTask && 
+    user.role !== 'admin' && 
+    editingTask.assignee?._id === user._id;
 
   const filteredTasks = useMemo(
     () =>
@@ -232,9 +237,13 @@ export default function ProjectDetail() {
                 {filteredTasks.map((task) => (
                   <tr key={task._id}>
                     <td>
-                      <button onClick={() => openTaskModal(task)} className="link-button">
-                        {task.title}
-                      </button>
+                      {canManage || task.assignee?._id === user._id ? (
+                        <button onClick={() => openTaskModal(task)} className="link-button">
+                          {task.title}
+                        </button>
+                      ) : (
+                        <span>{task.title}</span>
+                      )}
                     </td>
                     <td>
                       <span className={`status-badge ${task.status}`}>
@@ -284,29 +293,40 @@ export default function ProjectDetail() {
             </div>
 
             <form onSubmit={handleSaveTask} className="modal-form">
-              <label className="form-group" htmlFor="task-title">
-                Title
-                <input
-                  id="task-title"
-                  type="text"
-                  value={taskForm.title}
-                  onChange={(event) => setTaskForm({ ...taskForm, title: event.target.value })}
-                  placeholder="Write acceptance criteria"
-                />
-              </label>
+              {!canOnlyEditStatus && (
+                <>
+                  <label className="form-group" htmlFor="task-title">
+                    Title
+                    <input
+                      id="task-title"
+                      type="text"
+                      value={taskForm.title}
+                      onChange={(event) => setTaskForm({ ...taskForm, title: event.target.value })}
+                      placeholder="Write acceptance criteria"
+                    />
+                  </label>
 
-              <label className="form-group" htmlFor="task-description">
-                Description
-                <textarea
-                  id="task-description"
-                  rows={3}
-                  value={taskForm.description}
-                  onChange={(event) =>
-                    setTaskForm({ ...taskForm, description: event.target.value })
-                  }
-                  placeholder="Add context, links, or expected outcome"
-                />
-              </label>
+                  <label className="form-group" htmlFor="task-description">
+                    Description
+                    <textarea
+                      id="task-description"
+                      rows={3}
+                      value={taskForm.description}
+                      onChange={(event) =>
+                        setTaskForm({ ...taskForm, description: event.target.value })
+                      }
+                      placeholder="Add context, links, or expected outcome"
+                    />
+                  </label>
+                </>
+              )}
+
+              {canOnlyEditStatus && editingTask && (
+                <div className="form-group info-box">
+                  <p><strong>Task:</strong> {editingTask.title}</p>
+                  <p><strong>Description:</strong> {editingTask.description || 'No description'}</p>
+                </div>
+              )}
 
               <div className="form-row">
                 <label className="form-group" htmlFor="task-status">
@@ -322,45 +342,49 @@ export default function ProjectDetail() {
                   </select>
                 </label>
 
-                <label className="form-group" htmlFor="task-priority">
-                  Priority
-                  <select
-                    id="task-priority"
-                    value={taskForm.priority}
-                    onChange={(event) => setTaskForm({ ...taskForm, priority: event.target.value })}
-                  >
-                    {priorityOptions.map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </label>
+                {!canOnlyEditStatus && (
+                  <label className="form-group" htmlFor="task-priority">
+                    Priority
+                    <select
+                      id="task-priority"
+                      value={taskForm.priority}
+                      onChange={(event) => setTaskForm({ ...taskForm, priority: event.target.value })}
+                    >
+                      {priorityOptions.map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
               </div>
 
-              <div className="form-row">
-                <label className="form-group" htmlFor="task-assignee">
-                  Assignee
-                  <select
-                    id="task-assignee"
-                    value={taskForm.assignee}
-                    onChange={(event) => setTaskForm({ ...taskForm, assignee: event.target.value })}
-                  >
-                    <option value="">Unassigned</option>
-                    {project.members.map((member) => (
-                      <option key={member._id} value={member._id}>{member.name}</option>
-                    ))}
-                  </select>
-                </label>
+              {!canOnlyEditStatus && (
+                <div className="form-row">
+                  <label className="form-group" htmlFor="task-assignee">
+                    Assignee
+                    <select
+                      id="task-assignee"
+                      value={taskForm.assignee}
+                      onChange={(event) => setTaskForm({ ...taskForm, assignee: event.target.value })}
+                    >
+                      <option value="">Unassigned</option>
+                      {project.members.map((member) => (
+                        <option key={member._id} value={member._id}>{member.name}</option>
+                      ))}
+                    </select>
+                  </label>
 
-                <label className="form-group" htmlFor="task-due">
-                  Due date
-                  <input
-                    id="task-due"
-                    type="date"
-                    value={taskForm.dueDate}
-                    onChange={(event) => setTaskForm({ ...taskForm, dueDate: event.target.value })}
-                  />
-                </label>
-              </div>
+                  <label className="form-group" htmlFor="task-due">
+                    Due date
+                    <input
+                      id="task-due"
+                      type="date"
+                      value={taskForm.dueDate}
+                      onChange={(event) => setTaskForm({ ...taskForm, dueDate: event.target.value })}
+                    />
+                  </label>
+                </div>
+              )}
 
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={closeTaskModal}>
