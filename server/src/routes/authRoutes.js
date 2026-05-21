@@ -35,6 +35,15 @@ router.post(
 );
 
 router.get('/me', protect, getMe);
-router.get('/users', protect, getAllUsers);
+router.get('/users', protect, (req, res, next) => {
+  // Only admins can view all users
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Only admins can view all users'
+    });
+  }
+  next();
+}, getAllUsers);
 
 module.exports = router;

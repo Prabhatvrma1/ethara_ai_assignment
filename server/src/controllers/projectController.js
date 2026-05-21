@@ -28,6 +28,11 @@ const populateProject = (query) =>
 // POST /api/projects
 const createProject = async (req, res, next) => {
   try {
+    // Only admins can create projects
+    if (req.user.role !== 'admin') {
+      throw new ApiError(403, 'Only admins can create projects');
+    }
+
     const memberIds = uniqueIds([req.user._id, ...(req.body.members || [])]);
     await ensureUsersExist(memberIds);
 
@@ -80,13 +85,14 @@ const getProject = async (req, res, next) => {
 // PUT /api/projects/:id
 const updateProject = async (req, res, next) => {
   try {
+    // Only admins can update projects
+    if (req.user.role !== 'admin') {
+      throw new ApiError(403, 'Only admins can update projects');
+    }
+
     const project = await Project.findById(req.params.id);
     if (!project) {
       throw new ApiError(404, 'Project not found');
-    }
-
-    if (!canManageProject(project, req.user)) {
-      throw new ApiError(403, 'Only the project owner or an admin can update this project');
     }
 
     if (req.body.name !== undefined) project.name = req.body.name;
@@ -110,13 +116,14 @@ const updateProject = async (req, res, next) => {
 // DELETE /api/projects/:id
 const deleteProject = async (req, res, next) => {
   try {
+    // Only admins can delete projects
+    if (req.user.role !== 'admin') {
+      throw new ApiError(403, 'Only admins can delete projects');
+    }
+
     const project = await Project.findById(req.params.id);
     if (!project) {
       throw new ApiError(404, 'Project not found');
-    }
-
-    if (!canManageProject(project, req.user)) {
-      throw new ApiError(403, 'Only the project owner or an admin can delete this project');
     }
 
     await Task.deleteMany({ project: project._id });
