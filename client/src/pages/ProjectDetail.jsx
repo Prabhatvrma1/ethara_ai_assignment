@@ -61,10 +61,9 @@ export default function ProjectDetail() {
 
   const canManage = project && user.role === 'admin';
   
-  // Check if user can only edit status (is assignee but not admin)
-  const isUserAssignee = editingTask?.assignee?._id && user._id && 
-    String(editingTask.assignee._id) === String(user._id);
-  const canOnlyEditStatus = editingTask && user.role !== 'admin' && isUserAssignee;
+  // SIMPLIFIED: If member is editing an existing task, show member-only view
+  // Member can ONLY edit status, nothing else
+  const isMemberEditingTask = editingTask && user.role === 'member';
 
   const filteredTasks = useMemo(
     () =>
@@ -100,11 +99,11 @@ export default function ProjectDetail() {
   const handleSaveTask = async (event) => {
     event.preventDefault();
 
-    // Determine if member is only updating status
-    const isMemberStatusUpdate = canOnlyEditStatus;
+    // Simple check: If member is editing, only allow status field
+    const isMemberUpdate = user.role === 'member' && editingTask;
 
-    // Validate title only for new tasks or admin edits
-    if (!isMemberStatusUpdate && !taskForm.title.trim()) {
+    // Validate title only for admin or new tasks
+    if (!isMemberUpdate && !taskForm.title.trim()) {
       toast.error('Task title is required');
       return;
     }
@@ -113,8 +112,8 @@ export default function ProjectDetail() {
     try {
       let payload;
       
-      // Members can only send status field
-      if (isMemberStatusUpdate) {
+      // Members can ONLY send status field
+      if (isMemberUpdate) {
         payload = { status: taskForm.status };
       } else {
         // Admins can send all fields
@@ -297,13 +296,13 @@ export default function ProjectDetail() {
       {showTaskModal && (
         <div className="modal-overlay" onClick={closeTaskModal}>
           <section className="modal" onClick={(event) => event.stopPropagation()}>
-            {/* MEMBER-ONLY VIEW: Status Update Only */}
-            {canOnlyEditStatus && editingTask ? (
+            {/* MEMBER VIEW: Status Update Only (simple, read-only task info) */}
+            {isMemberEditingTask ? (
               <>
                 <div className="modal-header">
                   <div>
-                    <h2>Update task</h2>
-                    <p>Update task progress (status only)</p>
+                    <h2>Edit progress</h2>
+                    <p>Update this task's status</p>
                   </div>
                   <button className="icon-button" onClick={closeTaskModal} aria-label="Close modal">
                     x
@@ -311,9 +310,9 @@ export default function ProjectDetail() {
                 </div>
 
                 <form onSubmit={handleSaveTask} className="modal-form">
-                  {/* Read-only Task Details */}
+                  {/* Read-only Task Details Info Box */}
                   <div className="form-group info-box">
-                    <p className="info-box-title">📋 Task Details (Read-only)</p>
+                    <p className="info-box-title">📋 Task Details</p>
                     <p><strong>Title:</strong> {editingTask.title}</p>
                     <p><strong>Description:</strong> {editingTask.description || 'No description'}</p>
                     <p><strong>Priority:</strong> {priorityOptions.find(([value]) => value === editingTask.priority)?.[1]}</p>
@@ -321,7 +320,7 @@ export default function ProjectDetail() {
                     <p><strong>Due date:</strong> {formatDate(editingTask.dueDate)}</p>
                   </div>
 
-                  {/* ONLY Status Field for Members */}
+                  {/* ONLY Status Field - This is the ONLY editable field for members */}
                   <label className="form-group" htmlFor="task-status">
                     Status
                     <select
@@ -340,7 +339,7 @@ export default function ProjectDetail() {
                       Cancel
                     </button>
                     <button type="submit" className="btn-primary" disabled={savingTask}>
-                      {savingTask ? 'Saving...' : 'Save task'}
+                      {savingTask ? 'Saving...' : 'Update progress'}
                     </button>
                   </div>
                 </form>
