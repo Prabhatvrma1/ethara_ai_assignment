@@ -24,10 +24,21 @@ export default function Projects() {
   };
 
   useEffect(() => {
-    Promise.all([fetchProjects(), fetchUsers()])
-      .catch(() => toast.error('Unable to load projects'))
-      .finally(() => setLoading(false));
-  }, []);
+    const loadData = async () => {
+      try {
+        await fetchProjects();
+        // Only admins can see all users
+        if (user?.role === 'admin') {
+          await fetchUsers();
+        }
+      } catch (err) {
+        toast.error('Unable to load projects');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [user?.role]);
 
   const resetModal = () => {
     setForm({ name: '', description: '', members: [] });
@@ -98,23 +109,31 @@ export default function Projects() {
             {projects.length} active project{projects.length === 1 ? '' : 's'}
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setShowModal(true)}>
-          New project
-        </button>
+        {user?.role === 'admin' && (
+          <button className="btn-primary" onClick={() => setShowModal(true)}>
+            New project
+          </button>
+        )}
       </header>
 
       {projects.length === 0 ? (
         <section className="surface empty-state">
           <h3>No projects yet</h3>
-          <p>Start with a project, then assign tasks and track delivery from one place.</p>
-          <button className="btn-primary" onClick={() => setShowModal(true)}>
-            Create project
-          </button>
+          {user?.role === 'admin' ? (
+            <>
+              <p>Start with a project, then assign tasks and track delivery from one place.</p>
+              <button className="btn-primary" onClick={() => setShowModal(true)}>
+                Create project
+              </button>
+            </>
+          ) : (
+            <p>Ask an admin to create a project and add you as a member.</p>
+          )}
         </section>
       ) : (
         <section className="projects-grid">
           {projects.map((project) => {
-            const canManage = user.role === 'admin' || project.owner?._id === user._id;
+            const canManage = user.role === 'admin';
 
             return (
               <article key={project._id} className="project-card">
@@ -151,7 +170,7 @@ export default function Projects() {
         </section>
       )}
 
-      {showModal && (
+      {showModal && user?.role === 'admin' && (
         <div className="modal-overlay" onClick={resetModal}>
           <section className="modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">

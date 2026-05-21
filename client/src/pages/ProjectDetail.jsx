@@ -59,7 +59,7 @@ export default function ProjectDetail() {
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  const canManage = project && (user.role === 'admin' || project.owner?._id === user._id);
+  const canManage = project && user.role === 'admin';
   
   // Check if user can only edit status (is assignee but not admin)
   const canOnlyEditStatus = editingTask && 
@@ -209,9 +209,11 @@ export default function ProjectDetail() {
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
-            <button onClick={() => openTaskModal()} className="btn-primary">
-              New task
-            </button>
+            {user.role === 'admin' && (
+              <button onClick={() => openTaskModal()} className="btn-primary">
+                New task
+              </button>
+            )}
           </div>
         </div>
 
@@ -258,7 +260,7 @@ export default function ProjectDetail() {
                     <td>{task.assignee?.name || 'Unassigned'}</td>
                     <td>{formatDate(task.dueDate)}</td>
                     <td>
-                      {canManage ? (
+                      {user.role === 'admin' ? (
                         <button
                           onClick={() => handleDeleteTask(task._id)}
                           className="icon-button danger"

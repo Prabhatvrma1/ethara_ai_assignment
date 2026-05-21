@@ -47,6 +47,11 @@ const populateTask = (task) =>
 // POST /api/tasks/project/:projectId
 const createTask = async (req, res, next) => {
   try {
+    // Only admins can create tasks
+    if (req.user.role !== 'admin') {
+      throw new ApiError(403, 'Only admins can create tasks');
+    }
+
     const project = await loadProjectForUser(req.params.projectId, req.user);
     const assignee = normalizeAssignee(req.body.assignee);
     ensureAssigneeBelongsToProject(project, assignee);
@@ -171,15 +176,17 @@ const updateTask = async (req, res, next) => {
 // DELETE /api/tasks/:id
 const deleteTask = async (req, res, next) => {
   try {
+    // Only admins can delete tasks
+    if (req.user.role !== 'admin') {
+      throw new ApiError(403, 'Only admins can delete tasks');
+    }
+
     const task = await Task.findById(req.params.id);
     if (!task) {
       throw new ApiError(404, 'Task not found');
     }
 
     const project = await loadProjectForUser(task.project, req.user);
-    if (!canManageProject(project, req.user)) {
-      throw new ApiError(403, 'Only the project owner or an admin can delete tasks');
-    }
 
     await task.deleteOne();
     res.json({ success: true, message: 'Task deleted' });
