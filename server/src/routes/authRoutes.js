@@ -1,7 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { register, login, getMe, getAllUsers } = require('../controllers/authController');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 
 const router = express.Router();
@@ -35,15 +35,6 @@ router.post(
 );
 
 router.get('/me', protect, getMe);
-router.get('/users', protect, (req, res, next) => {
-  // Only admins can view all users
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      message: 'Only admins can view all users'
-    });
-  }
-  next();
-}, getAllUsers);
+router.get('/users', protect, authorize('admin'), getAllUsers);
 
 module.exports = router;

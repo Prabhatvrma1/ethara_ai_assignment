@@ -111,7 +111,11 @@ export default function Dashboard() {
         {recentTasks.length === 0 ? (
           <div className="empty-state">
             <h3>No tasks yet</h3>
-            <p>Create a project, invite teammates, and add the first task.</p>
+            <p>
+              {user.role === 'admin'
+                ? 'Create a project, invite teammates, and add the first task.'
+                : 'Tasks assigned to you will appear here.'}
+            </p>
           </div>
         ) : (
           <div className="table-wrap">

@@ -28,6 +28,9 @@ const priorityOptions = [
   ['urgent', 'Urgent'],
 ];
 
+const statusLabel = Object.fromEntries(statusOptions);
+const priorityLabel = Object.fromEntries(priorityOptions);
+
 export default function ProjectDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -40,6 +43,9 @@ export default function ProjectDetail() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [taskForm, setTaskForm] = useState(emptyTaskForm);
   const [savingTask, setSavingTask] = useState(false);
+
+  const isAdmin = user.role === 'admin';
+  const isProgressOnlyMode = Boolean(editingTask && !isAdmin);
 
   const fetchProjectAndTasks = async () => {
     const [projectRes, tasksRes] = await Promise.all([
@@ -59,20 +65,6 @@ export default function ProjectDetail() {
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  const canManage = project && user.role === 'admin';
-  
-  // If user is NOT admin and editing existing task, show member-only view
-  const isMemberEditingTask = editingTask && user.role !== 'admin';
-  
-  // DEBUG: Log to console
-  if (editingTask) {
-    console.log('DEBUG: user =', user);
-    console.log('DEBUG: user.role =', user.role);
-    console.log('DEBUG: editingTask =', editingTask);
-    console.log('DEBUG: user.role !== admin =', user.role !== 'admin');
-    console.log('DEBUG: isMemberEditingTask =', isMemberEditingTask);
-  }
-
   const filteredTasks = useMemo(
     () =>
       filterStatus === 'all'
@@ -85,6 +77,16 @@ export default function ProjectDetail() {
     setShowTaskModal(false);
     setEditingTask(null);
     setTaskForm(emptyTaskForm);
+  };
+
+  const openAdminTaskModal = (task = null) => {
+    if (!isAdmin) return;
+    openTaskModal(task);
+  };
+
+  const openProgressModal = (task) => {
+    if (task.assignee?._id !== user._id) return;
+    openTaskModal(task);
   };
 
   const openTaskModal = (task = null) => {
@@ -107,27 +109,19 @@ export default function ProjectDetail() {
   const handleSaveTask = async (event) => {
     event.preventDefault();
 
-    // Simple check: If member is editing, only allow status field
-    const isMemberUpdate = user.role === 'member' && editingTask;
+    if (isProgressOnlyMode) {
+      await saveProgressOnly();
+      return;
+    }
 
-    // Validate title only for admin or new tasks
-    if (!isMemberUpdate && !taskForm.title.trim()) {
+    if (!taskForm.title.trim()) {
       toast.error('Task title is required');
       return;
     }
 
     setSavingTask(true);
     try {
-      let payload;
-      
-      // Members can ONLY send status field
-      if (isMemberUpdate) {
-        payload = { status: taskForm.status };
-      } else {
-        // Admins can send all fields
-        payload = { ...taskForm, title: taskForm.title.trim() };
-      }
-
+      const payload = { ...taskForm, title: taskForm.title.trim() };
       if (editingTask) {
         await api.put(`/tasks/${editingTask._id}`, payload);
         toast.success('Task updated');
@@ -139,6 +133,20 @@ export default function ProjectDetail() {
       await fetchProjectAndTasks();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Unable to save task');
+    } finally {
+      setSavingTask(false);
+    }
+  };
+
+  const saveProgressOnly = async () => {
+    setSavingTask(true);
+    try {
+      await api.put(`/tasks/${editingTask._id}`, { status: taskForm.status });
+      toast.success('Progress updated');
+      closeTaskModal();
+      await fetchProjectAndTasks();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Unable to update progress');
     } finally {
       setSavingTask(false);
     }
@@ -195,7 +203,7 @@ export default function ProjectDetail() {
           <h1>{project.name}</h1>
           <p className="subtitle">{project.description || 'No description yet.'}</p>
         </div>
-        {canManage && (
+        {isAdmin && (
           <button onClick={handleDeleteProject} className="btn-danger">
             Delete project
           </button>
@@ -221,7 +229,11 @@ export default function ProjectDetail() {
         <div className="section-header">
           <div>
             <h2>Tasks</h2>
-            <p className="section-note">Create, assign, and move work through the delivery flow.</p>
+            <p className="section-note">
+              {isAdmin
+                ? 'Create, assign, and manage project tasks.'
+                : 'Members can view tasks and update progress only on assigned work.'}
+            </p>
           </div>
           <div className="toolbar">
             <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)}>
@@ -229,8 +241,8 @@ export default function ProjectDetail() {
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
-            {user.role === 'admin' && (
-              <button onClick={() => openTaskModal()} className="btn-primary">
+            {isAdmin && (
+              <button onClick={() => openAdminTaskModal()} className="btn-primary">
                 New task
               </button>
             )}
@@ -240,7 +252,7 @@ export default function ProjectDetail() {
         {filteredTasks.length === 0 ? (
           <div className="empty-state">
             <h3>No tasks in this view</h3>
-            <p>Add a task or switch the status filter.</p>
+            <p>{isAdmin ? 'Add a task or switch the status filter.' : 'Switch the status filter to see more tasks.'}</p>
           </div>
         ) : (
           <div className="table-wrap">
@@ -256,45 +268,56 @@ export default function ProjectDetail() {
                 </tr>
               </thead>
               <tbody>
-                {filteredTasks.map((task) => (
-                  <tr key={task._id}>
-                    <td>
-                      {canManage || task.assignee?._id === user._id ? (
-                        <button onClick={() => openTaskModal(task)} className="link-button">
-                          {task.title}
-                        </button>
-                      ) : (
-                        <span>{task.title}</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className={`status-badge ${task.status}`}>
-                        {statusOptions.find(([value]) => value === task.status)?.[1]}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`priority-badge ${task.priority}`}>
-                        {priorityOptions.find(([value]) => value === task.priority)?.[1]}
-                      </span>
-                    </td>
-                    <td>{task.assignee?.name || 'Unassigned'}</td>
-                    <td>{formatDate(task.dueDate)}</td>
-                    <td>
-                      {user.role === 'admin' ? (
-                        <button
-                          onClick={() => handleDeleteTask(task._id)}
-                          className="icon-button danger"
-                          aria-label={`Delete ${task.title}`}
-                          title="Delete task"
-                        >
-                          x
-                        </button>
-                      ) : (
-                        <span className="text-muted">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {filteredTasks.map((task) => {
+                  const isAssignedToMe = task.assignee?._id === user._id;
+
+                  return (
+                    <tr key={task._id}>
+                      <td>
+                        {isAdmin ? (
+                          <button onClick={() => openAdminTaskModal(task)} className="link-button">
+                            {task.title}
+                          </button>
+                        ) : (
+                          <span className="strong-cell">{task.title}</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`status-badge ${task.status}`}>
+                          {statusLabel[task.status]}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`priority-badge ${task.priority}`}>
+                          {priorityLabel[task.priority]}
+                        </span>
+                      </td>
+                      <td>{task.assignee?.name || 'Unassigned'}</td>
+                      <td>{formatDate(task.dueDate)}</td>
+                      <td>
+                        {isAdmin ? (
+                          <button
+                            onClick={() => handleDeleteTask(task._id)}
+                            className="icon-button danger"
+                            aria-label={`Delete ${task.title}`}
+                            title="Delete task"
+                          >
+                            x
+                          </button>
+                        ) : isAssignedToMe ? (
+                          <button
+                            onClick={() => openProgressModal(task)}
+                            className="btn-secondary btn-sm"
+                          >
+                            Update progress
+                          </button>
+                        ) : (
+                          <span className="text-muted">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -304,13 +327,12 @@ export default function ProjectDetail() {
       {showTaskModal && (
         <div className="modal-overlay" onClick={closeTaskModal}>
           <section className="modal" onClick={(event) => event.stopPropagation()}>
-            {/* MEMBER VIEW: Status Update Only (simple, read-only task info) */}
-            {isMemberEditingTask ? (
+            {isProgressOnlyMode ? (
               <>
                 <div className="modal-header">
                   <div>
-                    <h2>Edit progress</h2>
-                    <p>Update this task's status</p>
+                    <h2>Update progress</h2>
+                    <p>You can change only the status for tasks assigned to you.</p>
                   </div>
                   <button className="icon-button" onClick={closeTaskModal} aria-label="Close modal">
                     x
@@ -318,17 +340,15 @@ export default function ProjectDetail() {
                 </div>
 
                 <form onSubmit={handleSaveTask} className="modal-form">
-                  {/* Read-only Task Details Info Box */}
-                  <div className="form-group info-box">
-                    <p className="info-box-title">📋 Task Details</p>
+                  <div className="info-box">
+                    <p className="info-box-title">Task details</p>
                     <p><strong>Title:</strong> {editingTask.title}</p>
                     <p><strong>Description:</strong> {editingTask.description || 'No description'}</p>
-                    <p><strong>Priority:</strong> {priorityOptions.find(([value]) => value === editingTask.priority)?.[1]}</p>
+                    <p><strong>Priority:</strong> {priorityLabel[editingTask.priority]}</p>
                     <p><strong>Assigned to:</strong> {editingTask.assignee?.name || 'Unassigned'}</p>
                     <p><strong>Due date:</strong> {formatDate(editingTask.dueDate)}</p>
                   </div>
 
-                  {/* ONLY Status Field - This is the ONLY editable field for members */}
                   <label className="form-group" htmlFor="task-status">
                     Status
                     <select
@@ -353,7 +373,6 @@ export default function ProjectDetail() {
                 </form>
               </>
             ) : (
-              /* ADMIN VIEW: Full Task Editing */
               <>
                 <div className="modal-header">
                   <div>
