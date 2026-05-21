@@ -47,8 +47,24 @@ app.use('/api', (_req, _res, next) => next(new ApiError(404, 'API route not foun
 
 if (process.env.NODE_ENV === 'production') {
   const clientDistPath = path.join(__dirname, '../../client/dist');
-  app.use(express.static(clientDistPath));
+  app.use(
+    express.static(clientDistPath, {
+      index: false,
+      setHeaders(res, filePath) {
+        if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-store');
+          return;
+        }
+
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      },
+    })
+  );
+  app.get('/assets/*', (_req, _res, next) => {
+    next(new ApiError(404, 'Static asset not found'));
+  });
   app.get('*', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
 }
