@@ -100,14 +100,27 @@ export default function ProjectDetail() {
   const handleSaveTask = async (event) => {
     event.preventDefault();
 
-    if (!taskForm.title.trim()) {
+    // Determine if member is only updating status
+    const isMemberStatusUpdate = canOnlyEditStatus;
+
+    // Validate title only for new tasks or admin edits
+    if (!isMemberStatusUpdate && !taskForm.title.trim()) {
       toast.error('Task title is required');
       return;
     }
 
     setSavingTask(true);
     try {
-      const payload = { ...taskForm, title: taskForm.title.trim() };
+      let payload;
+      
+      // Members can only send status field
+      if (isMemberStatusUpdate) {
+        payload = { status: taskForm.status };
+      } else {
+        // Admins can send all fields
+        payload = { ...taskForm, title: taskForm.title.trim() };
+      }
+
       if (editingTask) {
         await api.put(`/tasks/${editingTask._id}`, payload);
         toast.success('Task updated');
@@ -287,7 +300,11 @@ export default function ProjectDetail() {
             <div className="modal-header">
               <div>
                 <h2>{editingTask ? 'Edit task' : 'New task'}</h2>
-                <p>{editingTask ? 'Update assignment and progress.' : 'Add work to this project.'}</p>
+                {canOnlyEditStatus ? (
+                  <p>Update task progress (status only)</p>
+                ) : (
+                  <p>{editingTask ? 'Update assignment and progress.' : 'Add work to this project.'}</p>
+                )}
               </div>
               <button className="icon-button" onClick={closeTaskModal} aria-label="Close modal">
                 x
@@ -325,8 +342,12 @@ export default function ProjectDetail() {
 
               {canOnlyEditStatus && editingTask && (
                 <div className="form-group info-box">
-                  <p><strong>Task:</strong> {editingTask.title}</p>
+                  <p className="info-box-title">📋 Task Details (Read-only)</p>
+                  <p><strong>Title:</strong> {editingTask.title}</p>
                   <p><strong>Description:</strong> {editingTask.description || 'No description'}</p>
+                  <p><strong>Priority:</strong> {priorityOptions.find(([value]) => value === editingTask.priority)?.[1]}</p>
+                  <p><strong>Assigned to:</strong> {editingTask.assignee?.name || 'Unassigned'}</p>
+                  <p><strong>Due date:</strong> {formatDate(editingTask.dueDate)}</p>
                 </div>
               )}
 

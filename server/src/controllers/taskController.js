@@ -132,23 +132,26 @@ const updateTask = async (req, res, next) => {
     const isAssignee = getId(task.assignee) === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
 
-    // If user is only assignee (not admin/owner), they can only update status
+    // Members who are NOT assignee cannot edit tasks at all
+    if (!isAdmin && !isAssignee) {
+      throw new ApiError(403, 'Only the task assignee or admin can update this task');
+    }
+
+    // If user is only assignee (not admin), they can ONLY update status
     if (!isAdmin && isAssignee) {
+      // Check if trying to update any forbidden fields
+      const forbiddenFields = ['title', 'description', 'priority', 'dueDate', 'assignee'];
+      for (const field of forbiddenFields) {
+        if (req.body[field] !== undefined) {
+          throw new ApiError(403, 'Members can only update task status');
+        }
+      }
+      // Only allow status update
       if (req.body.status !== undefined) {
         task.status = req.body.status;
       }
-      // Reject any other field updates
-      const forbiddenFields = ['title', 'description', 'priority', 'dueDate', 'assignee'];
-      for (const field of forbiddenFields) {
-        if (req.body[field] !== undefined && task[field] !== req.body[field]) {
-          throw new ApiError(403, `Members can only update task status`);
-        }
-      }
-    } else if (!isAdmin && !isAssignee) {
-      // Non-admin, non-assignee members cannot edit tasks
-      throw new ApiError(403, 'Only the assignee or admin can update this task');
     } else {
-      // Admin or project owner can update all fields
+      // Admin can update all fields
       const assignee = normalizeAssignee(req.body.assignee);
       ensureAssigneeBelongsToProject(project, assignee);
 

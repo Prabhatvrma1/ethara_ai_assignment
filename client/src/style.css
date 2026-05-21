@@ -682,6 +682,14 @@ a {
   color: var(--text);
 }
 
+.info-box-title {
+  font-weight: 600;
+  margin-bottom: 12px !important;
+  color: var(--primary);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
 .info-box p:last-child {
   margin-bottom: 0;
 }
