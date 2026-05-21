@@ -297,23 +297,68 @@ export default function ProjectDetail() {
       {showTaskModal && (
         <div className="modal-overlay" onClick={closeTaskModal}>
           <section className="modal" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>{editingTask ? 'Edit task' : 'New task'}</h2>
-                {canOnlyEditStatus ? (
-                  <p>Update task progress (status only)</p>
-                ) : (
-                  <p>{editingTask ? 'Update assignment and progress.' : 'Add work to this project.'}</p>
-                )}
-              </div>
-              <button className="icon-button" onClick={closeTaskModal} aria-label="Close modal">
-                x
-              </button>
-            </div>
+            {/* MEMBER-ONLY VIEW: Status Update Only */}
+            {canOnlyEditStatus && editingTask ? (
+              <>
+                <div className="modal-header">
+                  <div>
+                    <h2>Update task</h2>
+                    <p>Update task progress (status only)</p>
+                  </div>
+                  <button className="icon-button" onClick={closeTaskModal} aria-label="Close modal">
+                    x
+                  </button>
+                </div>
 
-            <form onSubmit={handleSaveTask} className="modal-form">
-              {!canOnlyEditStatus && (
-                <>
+                <form onSubmit={handleSaveTask} className="modal-form">
+                  {/* Read-only Task Details */}
+                  <div className="form-group info-box">
+                    <p className="info-box-title">📋 Task Details (Read-only)</p>
+                    <p><strong>Title:</strong> {editingTask.title}</p>
+                    <p><strong>Description:</strong> {editingTask.description || 'No description'}</p>
+                    <p><strong>Priority:</strong> {priorityOptions.find(([value]) => value === editingTask.priority)?.[1]}</p>
+                    <p><strong>Assigned to:</strong> {editingTask.assignee?.name || 'Unassigned'}</p>
+                    <p><strong>Due date:</strong> {formatDate(editingTask.dueDate)}</p>
+                  </div>
+
+                  {/* ONLY Status Field for Members */}
+                  <label className="form-group" htmlFor="task-status">
+                    Status
+                    <select
+                      id="task-status"
+                      value={taskForm.status}
+                      onChange={(event) => setTaskForm({ ...taskForm, status: event.target.value })}
+                    >
+                      {statusOptions.slice(1).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="modal-footer">
+                    <button type="button" className="btn-secondary" onClick={closeTaskModal}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn-primary" disabled={savingTask}>
+                      {savingTask ? 'Saving...' : 'Save task'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            ) : (
+              /* ADMIN VIEW: Full Task Editing */
+              <>
+                <div className="modal-header">
+                  <div>
+                    <h2>{editingTask ? 'Edit task' : 'New task'}</h2>
+                    <p>{editingTask ? 'Update assignment and progress.' : 'Add work to this project.'}</p>
+                  </div>
+                  <button className="icon-button" onClick={closeTaskModal} aria-label="Close modal">
+                    x
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveTask} className="modal-form">
                   <label className="form-group" htmlFor="task-title">
                     Title
                     <input
@@ -337,87 +382,72 @@ export default function ProjectDetail() {
                       placeholder="Add context, links, or expected outcome"
                     />
                   </label>
-                </>
-              )}
 
-              {canOnlyEditStatus && editingTask && (
-                <div className="form-group info-box">
-                  <p className="info-box-title">📋 Task Details (Read-only)</p>
-                  <p><strong>Title:</strong> {editingTask.title}</p>
-                  <p><strong>Description:</strong> {editingTask.description || 'No description'}</p>
-                  <p><strong>Priority:</strong> {priorityOptions.find(([value]) => value === editingTask.priority)?.[1]}</p>
-                  <p><strong>Assigned to:</strong> {editingTask.assignee?.name || 'Unassigned'}</p>
-                  <p><strong>Due date:</strong> {formatDate(editingTask.dueDate)}</p>
-                </div>
-              )}
+                  <div className="form-row">
+                    <label className="form-group" htmlFor="task-status">
+                      Status
+                      <select
+                        id="task-status"
+                        value={taskForm.status}
+                        onChange={(event) => setTaskForm({ ...taskForm, status: event.target.value })}
+                      >
+                        {statusOptions.slice(1).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </label>
 
-              <div className="form-row">
-                <label className="form-group" htmlFor="task-status">
-                  Status
-                  <select
-                    id="task-status"
-                    value={taskForm.status}
-                    onChange={(event) => setTaskForm({ ...taskForm, status: event.target.value })}
-                  >
-                    {statusOptions.slice(1).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </label>
+                    <label className="form-group" htmlFor="task-priority">
+                      Priority
+                      <select
+                        id="task-priority"
+                        value={taskForm.priority}
+                        onChange={(event) => setTaskForm({ ...taskForm, priority: event.target.value })}
+                      >
+                        {priorityOptions.map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
 
-                {!canOnlyEditStatus && (
-                  <label className="form-group" htmlFor="task-priority">
-                    Priority
-                    <select
-                      id="task-priority"
-                      value={taskForm.priority}
-                      onChange={(event) => setTaskForm({ ...taskForm, priority: event.target.value })}
-                    >
-                      {priorityOptions.map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-              </div>
+                  <div className="form-row">
+                    <label className="form-group" htmlFor="task-assignee">
+                      Assignee
+                      <select
+                        id="task-assignee"
+                        value={taskForm.assignee}
+                        onChange={(event) => setTaskForm({ ...taskForm, assignee: event.target.value })}
+                      >
+                        <option value="">Unassigned</option>
+                        {project.members.map((member) => (
+                          <option key={member._id} value={member._id}>{member.name}</option>
+                        ))}
+                      </select>
+                    </label>
 
-              {!canOnlyEditStatus && (
-                <div className="form-row">
-                  <label className="form-group" htmlFor="task-assignee">
-                    Assignee
-                    <select
-                      id="task-assignee"
-                      value={taskForm.assignee}
-                      onChange={(event) => setTaskForm({ ...taskForm, assignee: event.target.value })}
-                    >
-                      <option value="">Unassigned</option>
-                      {project.members.map((member) => (
-                        <option key={member._id} value={member._id}>{member.name}</option>
-                      ))}
-                    </select>
-                  </label>
+                    <label className="form-group" htmlFor="task-due">
+                      Due date
+                      <input
+                        id="task-due"
+                        type="date"
+                        value={taskForm.dueDate}
+                        onChange={(event) => setTaskForm({ ...taskForm, dueDate: event.target.value })}
+                      />
+                    </label>
+                  </div>
 
-                  <label className="form-group" htmlFor="task-due">
-                    Due date
-                    <input
-                      id="task-due"
-                      type="date"
-                      value={taskForm.dueDate}
-                      onChange={(event) => setTaskForm({ ...taskForm, dueDate: event.target.value })}
-                    />
-                  </label>
-                </div>
-              )}
-
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={closeTaskModal}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary" disabled={savingTask}>
-                  {savingTask ? 'Saving...' : 'Save task'}
-                </button>
-              </div>
-            </form>
+                  <div className="modal-footer">
+                    <button type="button" className="btn-secondary" onClick={closeTaskModal}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn-primary" disabled={savingTask}>
+                      {savingTask ? 'Saving...' : 'Save task'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </section>
         </div>
       )}
