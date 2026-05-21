@@ -62,9 +62,9 @@ export default function ProjectDetail() {
   const canManage = project && user.role === 'admin';
   
   // Check if user can only edit status (is assignee but not admin)
-  const canOnlyEditStatus = editingTask && 
-    user.role !== 'admin' && 
-    editingTask.assignee?._id === user._id;
+  const isUserAssignee = editingTask?.assignee?._id && user._id && 
+    String(editingTask.assignee._id) === String(user._id);
+  const canOnlyEditStatus = editingTask && user.role !== 'admin' && isUserAssignee;
 
   const filteredTasks = useMemo(
     () =>
