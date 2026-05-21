@@ -64,6 +64,13 @@ export default function ProjectDetail() {
   // SIMPLIFIED: If member is editing an existing task, show member-only view
   // Member can ONLY edit status, nothing else
   const isMemberEditingTask = editingTask && user.role === 'member';
+  
+  // DEBUG: Log to console
+  if (editingTask) {
+    console.log('DEBUG: user.role =', user.role);
+    console.log('DEBUG: editingTask =', editingTask);
+    console.log('DEBUG: isMemberEditingTask =', isMemberEditingTask);
+  }
 
   const filteredTasks = useMemo(
     () =>
