@@ -79,8 +79,11 @@ const login = async (req, res, next) => {
 // GET /api/auth/me
 const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('name email role');
-    res.json({ success: true, data: user });
+    const user = await User.findById(req.user._id);
+    res.json({ 
+      success: true, 
+      data: serializeUser(user) 
+    });
   } catch (err) {
     next(err);
   }

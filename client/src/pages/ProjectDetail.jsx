@@ -61,14 +61,15 @@ export default function ProjectDetail() {
 
   const canManage = project && user.role === 'admin';
   
-  // SIMPLIFIED: If member is editing an existing task, show member-only view
-  // Member can ONLY edit status, nothing else
-  const isMemberEditingTask = editingTask && user.role === 'member';
+  // If user is NOT admin and editing existing task, show member-only view
+  const isMemberEditingTask = editingTask && user.role !== 'admin';
   
   // DEBUG: Log to console
   if (editingTask) {
+    console.log('DEBUG: user =', user);
     console.log('DEBUG: user.role =', user.role);
     console.log('DEBUG: editingTask =', editingTask);
+    console.log('DEBUG: user.role !== admin =', user.role !== 'admin');
     console.log('DEBUG: isMemberEditingTask =', isMemberEditingTask);
   }
 
